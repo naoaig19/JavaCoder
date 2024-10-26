@@ -1,12 +1,16 @@
-// Alerta
-window.alert("Hola bienvenid@ a nuestro sitio web! Por favor, selecciona los servicios deseados");
+// Inicializa el carrito desde localStorage
+let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
 
-// Array
-const carrito = [];
+// Array de servicios
+const servicios = [];
 
-// Función para agregar un servicio al carrito
+// Función para calcular el total del carrito
+function totalCarrito() {
+    return carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+}
+
+// Funciones del Carrito
 function agregarcarrito(servicio, precio) {
-    console.log(`Agregando al carrito: ${servicio}`); // Lógica de depuración
     const existingItem = carrito.find(item => item.nombre === servicio);
 
     if (existingItem) {
@@ -15,28 +19,29 @@ function agregarcarrito(servicio, precio) {
         carrito.push({ nombre: servicio, precio: precio, cantidad: 1 });
     }
 
-    // Actualiza la visualización del carrito
+    actualizarLocalStorage();
     actcarrito();
 }
 
-// Función para eliminar un servicio del carrito
 function eliminarDelCarrito(servicio) {
     const itemIndex = carrito.findIndex(item => item.nombre === servicio);
 
     if (itemIndex !== -1) {
         carrito[itemIndex].cantidad -= 1;
 
-        // Si la cantidad llega a cero, lo eliminamos del carrito
         if (carrito[itemIndex].cantidad === 0) {
             carrito.splice(itemIndex, 1);
         }
 
-        // Actualiza la visualización del carrito
+        actualizarLocalStorage();
         actcarrito();
     }
 }
 
-// Función para actualizar la visualización del carrito
+function actualizarLocalStorage() {
+    localStorage.setItem('carrito', JSON.stringify(carrito));
+}
+
 function actcarrito() {
     const cartItems = document.getElementById('cart-items');
     cartItems.innerHTML = '';
@@ -45,7 +50,6 @@ function actcarrito() {
         const listItem = document.createElement('li');
         listItem.textContent = `${item.nombre} - $${item.precio} x ${item.cantidad}`;
 
-        // Botón para eliminar del carrito
         const removeButton = document.createElement('button');
         removeButton.textContent = 'Eliminar';
         removeButton.onclick = () => eliminarDelCarrito(item.nombre);
@@ -54,37 +58,101 @@ function actcarrito() {
         cartItems.appendChild(listItem);
     });
 
-    // Actualiza el total
     const totalAmount = totalCarrito();
     document.getElementById('total').textContent = `Total: $${totalAmount}`;
 }
 
-// Función para calcular el total del carrito
-function totalCarrito() {
-    return carrito.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-}
-
-// Función para finalizar la selección y mostrar el total
 function finalizarsolicitud() {
     const phoneNumber = prompt("Por favor, ingresa tu número de celular para que coordinemos la cita");
 
     if (phoneNumber) {
         const totalAmount = totalCarrito();
-        alert("Su total es $" + totalAmount + ". En breve nos comunicaremos con usted al número " + phoneNumber + " para coordinar la cita y la seña.");
+        //Modifique los alert por un sweet
+        Swal.fire({
+            title: "EXCELENTE",
+            text: "Su total es $" + totalAmount + ". En breve nos comunicaremos con usted al número " + phoneNumber + " para coordinar la cita y la seña.",
+            icon: "success",
+            confirmButtonText: 'Aceptar'
+        });
 
-        // Reiniciar el carrito
         carrito.length = 0;
-        actcarrito(); // Actualiza la visualización
-        window.alert("Hola bienvenid@ a nuestro sitio web! Por favor, selecciona los servicios deseados");
+        actualizarLocalStorage();
+        actcarrito();
     } else {
-        alert("No se ingresó un número de celular. No se puede completar el pedido.");
+        prompt("No se ingresó un número de celular. No se puede completar el pedido.");
     }
 }
 
-document.querySelectorAll('.service-content button').forEach(button => {
-    button.addEventListener('click', function () {
-        const servicio = this.previousElementSibling.previousElementSibling.textContent;
-        const precio = parseInt(this.parentNode.querySelector('.price').textContent.replace(/[^\d]/g, ''), 10);
-        agregarcarrito(servicio, precio);
+// Funciones de Servicios
+const serviciosPreexistentes = async () => {
+    if (servicios.length === 0) {
+        try {
+            const URLservicios = "./servicios.json";
+            const serviciosBasePuro = await fetch(URLservicios);
+
+            if (!serviciosBasePuro.ok) {
+                throw new Error('Error en la red: ' + serviciosBasePuro.statusText);
+            }
+
+            const serviciosBase = await serviciosBasePuro.json();
+            serviciosBase.forEach(serv => agregarServicio(serv));
+        } catch (err) {
+            console.error("Se produjo un error al realizar el fetch:", err);
+        } finally {
+            renderizarServicios(servicios);
+        }
+    } else {
+        renderizarServicios(servicios);
+    }
+};
+
+function agregarServicio(serv) {
+    servicios.push(serv);
+}
+
+function renderizarServicios(servicios) {
+    const container = document.getElementById('services-container');
+    container.innerHTML = '';
+
+    servicios.forEach(serv => {
+        const serviceDiv = document.createElement('div');
+        serviceDiv.className = 'service';
+
+        const img = document.createElement('img');
+        img.src = "./multimedia/karen.jpeg"; // Cambia esto si tienes imágenes específicas
+        img.alt = serv.nombre;
+
+        const serviceContent = document.createElement('div');
+        serviceContent.className = 'service-content';
+
+        const title = document.createElement('h2');
+        title.className = 'nombreservicio';
+        title.textContent = serv.nombre;
+
+        const description = document.createElement('p');
+        description.textContent = serv.descripcion;
+
+        const price = document.createElement('p');
+        price.className = 'precio';
+        price.textContent = `Precio: $${serv.precio}`;
+
+        const button = document.createElement('button');
+        button.textContent = 'Añadir al carrito';
+        button.onclick = () => agregarcarrito(serv.nombre, serv.precio);
+
+        serviceContent.appendChild(title);
+        serviceContent.appendChild(description);
+        serviceContent.appendChild(price);
+        serviceContent.appendChild(button);
+
+        serviceDiv.appendChild(img);
+        serviceDiv.appendChild(serviceContent);
+        container.appendChild(serviceDiv);
     });
+}
+
+// Llama a las funciones al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    serviciosPreexistentes();
+    actcarrito();
 });

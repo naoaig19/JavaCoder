@@ -1,0 +1,17 @@
+[
+    {
+        "nombre": "Masaje Relajante",
+        "precio": 12000,
+        "descripcion": "Disfruta de un masaje relajante."
+    },
+    {
+        "nombre": "Facial Revitalizante",
+        "precio": 15000,
+        "descripcion": "Revitaliza tu piel."
+    },
+    {
+        "nombre": "Kapping de uñas",
+        "precio": 7000,
+        "descripcion": "Disfruta de una manicura."
+    }
+]
